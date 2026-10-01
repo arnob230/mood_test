@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Moodlens | Face Mood, Age and Gender Analysis</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#14213d;--mut:#66728a;--paper:#f3f5f9;--card:#fff;--line:#e0e5ee;--accent:#2f5bea;
+  --mc:#2f5bea; /* live mood colour */
+  --r:16px;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:var(--paper);color:var(--ink);line-height:1.5}
+button{font-family:inherit}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+
+/* top bar */
+.top{background:var(--ink);color:#fff}
+.top .in{max-width:1120px;margin:0 auto;padding:14px 24px;display:flex;align-items:center;gap:16px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:19px;letter-spacing:-.3px}
+.logo{width:32px;height:32px;border-radius:50%;border:3px solid #fff;position:relative}
+.logo::after{content:"";position:absolute;inset:6px;border-radius:50%;background:var(--mc);transition:background .4s}
+.seg{margin-left:auto;background:rgba(255,255,255,.1);border-radius:999px;padding:4px;display:flex}
+.seg button{border:0;background:none;color:#c8d0e2;padding:8px 20px;border-radius:999px;font-weight:600;font-size:14px;cursor:pointer}
+.seg button.on{background:#fff;color:var(--ink)}
+
+main{max-width:1120px;margin:0 auto;padding:28px 24px 60px}
+.hide{display:none!important}
+h2{font-size:26px;letter-spacing:-.5px;margin:0 0 4px}
+.lead{color:var(--mut);margin:0 0 22px;font-size:15px}
+
+/* user layout */
+.split{display:grid;grid-template-columns:1.25fr 1fr;gap:22px}
+@media(max-width:860px){.split{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:20px}
+
+.stage{position:relative;aspect-ratio:4/3;border-radius:12px;overflow:hidden;background:#0e1730;
+  box-shadow:0 0 0 4px var(--mc);transition:box-shadow .4s}
+.stage .mir{position:absolute;inset:0;transform:scaleX(-1)}
+.stage video,.stage canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.idle{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:#9fb0d6;text-align:center;padding:20px}
+.idle svg{width:54px;height:54px;opacity:.8}
+.live{position:absolute;top:12px;left:12px;background:rgba(20,33,61,.8);color:#fff;font-size:12px;font-weight:700;padding:5px 11px;border-radius:999px;display:flex;align-items:center;gap:7px}
+.live i{width:8px;height:8px;border-radius:50%;background:#ef4444;animation:blink 1.2s infinite}
+@keyframes blink{50%{opacity:.25}}
+@media(prefers-reduced-motion:reduce){.live i{animation:none}}
+
+.controls{display:flex;gap:10px;align-items:center;margin-top:16px;flex-wrap:wrap}
+.btn{border:0;border-radius:10px;padding:12px 20px;font-weight:700;font-size:15px;cursor:pointer;background:var(--accent);color:#fff}
+.btn:disabled{background:#c5cbd8;cursor:not-allowed}
+.btn.ghost{background:#eaeef6;color:var(--ink)}
+.btn.danger{background:#fde8e8;color:#b42318}
+.state{font-size:13px;color:var(--mut)}
+.consent{display:flex;gap:10px;align-items:flex-start;font-size:14px;color:var(--mut);margin-top:16px;padding:12px 14px;background:#f6f8fc;border-radius:10px}
+.consent input{margin-top:4px;width:17px;height:17px;accent-color:var(--accent)}
+
+/* result panel */
+.hero{border-radius:12px;padding:22px;text-align:center;background:color-mix(in srgb,var(--mc) 12%,#fff);border:1px solid color-mix(in srgb,var(--mc) 35%,#fff);transition:all .4s}
+.emoji{font-size:64px;line-height:1}
+.moodname{font-size:30px;font-weight:800;text-transform:capitalize;letter-spacing:-.5px;margin-top:6px}
+.sub{font-size:13px;color:var(--mut)}
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:14px 0}
+.tile{border:1px solid var(--line);border-radius:12px;padding:14px}
+.tile small{color:var(--mut);font-size:12px;font-weight:600}
+.tile b{display:block;font-size:24px;letter-spacing:-.5px;text-transform:capitalize}
+.bar{display:grid;grid-template-columns:78px 1fr 40px;gap:10px;align-items:center;font-size:13px;margin:7px 0}
+.bar .t{height:8px;background:#edf0f6;border-radius:99px;overflow:hidden}
+.bar .t i{display:block;height:100%;border-radius:99px;transition:width .25s}
+.bar span:last-child{text-align:right;color:var(--mut)}
+.bar span:first-child{text-transform:capitalize}
+.note{font-size:12px;color:var(--mut);margin-top:12px}
+
+/* admin */
+.login{max-width:380px;margin:50px auto;text-align:center}
+.login input{width:100%;padding:13px 14px;border:1px solid var(--line);border-radius:10px;font:inherit;margin:14px 0 10px}
+.err{color:#b42318;font-size:13px;min-height:20px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px}
+@media(max-width:760px){.stats{grid-template-columns:1fr 1fr}}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px}
+.stat small{color:var(--mut);font-weight:600;font-size:12px}
+.stat b{display:block;font-size:28px;letter-spacing:-.8px;text-transform:capitalize}
+.dist{display:flex;height:10px;border-radius:99px;overflow:hidden;margin:4px 0 16px;background:#e6e9f1}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;align-items:center}
+.chip{border:1px solid var(--line);background:#fff;border-radius:999px;padding:7px 14px;font-size:13px;font-weight:600;cursor:pointer;text-transform:capitalize;display:flex;gap:7px;align-items:center}
+.chip.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.chip i{width:9px;height:9px;border-radius:50%}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:16px}
+.item{background:#fff;border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.item img{width:100%;display:block;aspect-ratio:4/3;object-fit:cover}
+.item .b{padding:12px 14px}
+.badge{display:inline-block;color:#fff;font-weight:700;font-size:12px;padding:3px 10px;border-radius:999px;text-transform:capitalize}
+.meta{font-size:13px;color:var(--mut);margin-top:6px}
+.meta b{color:var(--ink);text-transform:capitalize}
+.del{border:0;background:none;color:#b42318;font-weight:600;font-size:12px;cursor:pointer;padding:6px 0 0}
+.empty{grid-column:1/-1;text-align:center;color:var(--mut);padding:50px 10px}
+</style>
+</head>
+<body>
+<header class="top"><div class="in">
+  <div class="brand"><span class="logo"></span>Moodlens</div>
+  <div class="seg" role="tablist">
+    <button id="tabUser" class="on">Live analysis</button>
+    <button id="tabAdmin">Admin</button>
+  </div>
+</div></header>
+
+<main>
+<!-- USER -->
+<section id="user">
+  <h2>Live face analysis</h2>
+  <p class="lead">Camera on korle mood, boyosh ar gender real time e dekhabe.</p>
+  <div class="split">
+    <div class="card">
+      <div class="stage">
+        <div class="mir"><video id="vid" autoplay muted playsinline></video><canvas id="ov"></canvas></div>
+        <div class="idle" id="idle">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>
+          <div>Camera off ache</div>
+        </div>
+        <div class="live hide" id="live"><i></i>LIVE</div>
+      </div>
+      <div class="controls">
+        <button class="btn" id="start" disabled>Camera on koro</button>
+        <button class="btn ghost" id="stop" disabled>Camera off</button>
+        <span class="state" id="status">Model load hocche...</span>
+      </div>
+      <label class="consent"><input type="checkbox" id="consent">
+        <span>Ami sommoti dichhi: amar face, mood, boyosh ar gender analyse hobe ebong photo ei browser e save hobe.</span></label>
+    </div>
+
+    <div class="card">
+      <div class="hero">
+        <div class="emoji" id="emoji">🙂</div>
+        <div class="moodname" id="mood">Waiting</div>
+        <div class="sub" id="saved">Face detect hole 5 second por por photo save hobe</div>
+      </div>
+      <div class="tiles">
+        <div class="tile"><small>Age (approx)</small><b id="age">-</b></div>
+        <div class="tile"><small>Gender</small><b id="gender">-</b><span class="sub" id="gconf"></span></div>
+      </div>
+      <div id="bars"></div>
+      <div class="note">Result 100% accurate na. Bhalo light ar shamne theke camera dile bhalo kaj kore.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ADMIN -->
+<section id="admin" class="hide">
+  <div id="login" class="card login">
+    <h2>Admin login</h2>
+    <p class="lead" style="margin:0">Demo password: <b>admin123</b></p>
+    <input type="password" id="pw" placeholder="Password" aria-label="Password">
+    <div class="err" id="err"></div>
+    <button class="btn" id="loginBtn" style="width:100%">Login</button>
+  </div>
+
+  <div id="panel" class="hide">
+    <h2>Captured records</h2>
+    <p class="lead">User der photo, mood, boyosh ar gender ekhane dekha jabe.</p>
+    <div class="stats" id="stats"></div>
+    <div class="dist" id="dist"></div>
+    <div class="chips" id="chips"></div>
+    <div class="grid" id="grid"></div>
+    <div style="margin-top:22px"><button class="btn danger" id="clear">Sob record delete koro</button></div>
+  </div>
+</section>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.13/dist/face-api.js"></script>
+<script>
+const MODEL_URL='https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.13/model/';
+const KEY='moodlens_records', SAVE_EVERY=5000;
+const EMOJI={happy:'😄',sad:'😢',angry:'😠',surprised:'😲',neutral:'😐',fearful:'😨',disgusted:'🤢'};
+const COL={happy:'#f5a524',sad:'#4a7bd0',angry:'#e5484d',surprised:'#a45ee6',neutral:'#7b8794',fearful:'#1fa38a',disgusted:'#7a9a2e'};
+const $=id=>document.getElementById(id);
+let stream,loop,lastSave=0,ready=false,ages=[],filter='';
+
+function setMood(m){document.documentElement.style.setProperty('--mc',COL[m]||'#2f5bea')}
+
+/* tabs */
+function show(w){
+  $('user').classList.toggle('hide',w!=='user');$('admin').classList.toggle('hide',w!=='admin');
+  $('tabUser').classList.toggle('on',w==='user');$('tabAdmin').classList.toggle('on',w==='admin');
+  if(w==='admin')render();
+}
+$('tabUser').onclick=()=>show('user');$('tabAdmin').onclick=()=>show('admin');
+
+/* storage */
+const load=()=>{try{return JSON.parse(localStorage.getItem(KEY))||[]}catch(e){return[]}};
+function save(rec){
+  const a=load();a.unshift(rec);
+  try{localStorage.setItem(KEY,JSON.stringify(a.slice(0,40)))}
+  catch(e){$('saved').textContent='Storage full. Admin theke purano photo delete koro.'}
+}
+
+/* models */
+(async()=>{
+  try{
+    await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
+    await faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL);
+    await faceapi.nets.ageGenderNet.loadFromUri(MODEL_URL);
+    ready=true;$('status').textContent='Ready';upd();
+  }catch(e){$('status').textContent='Model load hoy nai. Internet check koro.'}
+})();
+const upd=()=>{$('start').disabled=!($('consent').checked&&ready&&!stream)};
+$('consent').onchange=upd;
+
+/* camera */
+$('start').onclick=async()=>{
+  try{stream=await navigator.mediaDevices.getUserMedia({video:{width:640,height:480}})}
+  catch(e){$('status').textContent='Camera permission dao (localhost ba HTTPS e chalao)';return}
+  $('vid').srcObject=stream;$('idle').classList.add('hide');$('live').classList.remove('hide');
+  $('stop').disabled=false;$('start').disabled=true;$('status').textContent='Detecting...';
+  $('vid').onloadedmetadata=detect;
+};
+$('stop').onclick=()=>{
+  clearTimeout(loop);if(stream)stream.getTracks().forEach(t=>t.stop());stream=null;
+  $('vid').srcObject=null;$('idle').classList.remove('hide');$('live').classList.add('hide');
+  $('stop').disabled=true;upd();reset();$('status').textContent='Camera off';
+};
+function reset(){
+  setMood();$('emoji').textContent='🙂';$('mood').textContent='Waiting';
+  $('age').textContent='-';$('gender').textContent='-';$('gconf').textContent='';$('bars').innerHTML='';ages=[];
+}
+
+function corners(ctx,b,color){
+  const L=Math.min(b.width,b.height)*0.22;ctx.strokeStyle=color;ctx.lineWidth=5;ctx.lineCap='round';
+  [[b.x,b.y,1,1],[b.x+b.width,b.y,-1,1],[b.x,b.y+b.height,1,-1],[b.x+b.width,b.y+b.height,-1,-1]].forEach(([x,y,dx,dy])=>{
+    ctx.beginPath();ctx.moveTo(x+dx*L,y);ctx.lineTo(x,y);ctx.lineTo(x,y+dy*L);ctx.stroke();
+  });
+}
+
+async function detect(){
+  if(!stream)return;
+  const v=$('vid'),c=$('ov'),ctx=c.getContext('2d');
+  const r=await faceapi.detectSingleFace(v,new faceapi.TinyFaceDetectorOptions()).withFaceExpressions().withAgeAndGender();
+  c.width=v.videoWidth;c.height=v.videoHeight;ctx.clearRect(0,0,c.width,c.height);
+  if(r){
+    const e=Object.entries(r.expressions).sort((a,b)=>b[1]-a[1]),top=e[0];
+    setMood(top[0]);
+    $('emoji').textContent=EMOJI[top[0]]||'🙂';$('mood').textContent=top[0];
+    ages.push(r.age);if(ages.length>10)ages.shift();
+    const age=Math.round(ages.reduce((a,b)=>a+b,0)/ages.length);
+    $('age').textContent='~'+age+' bochhor';
+    $('gender').textContent=r.gender;$('gconf').textContent=Math.round(r.genderProbability*100)+'% sure';
+    $('bars').innerHTML=e.map(([k,p])=>`<div class="bar"><span>${k}</span><div class="t"><i style="width:${(p*100).toFixed(0)}%;background:${COL[k]}"></i></div><span>${(p*100).toFixed(0)}%</span></div>`).join('');
+    corners(ctx,r.detection.box,COL[top[0]]);
+    const now=Date.now();
+    if(now-lastSave>SAVE_EVERY){
+      lastSave=now;const t=document.createElement('canvas');t.width=320;t.height=240;
+      t.getContext('2d').drawImage(v,0,0,320,240);
+      save({img:t.toDataURL('image/jpeg',.7),mood:top[0],conf:Math.round(top[1]*100),age,gender:r.gender,time:new Date().toLocaleString()});
+      $('saved').textContent='Photo save hoyeche: '+new Date().toLocaleTimeString();
+    }
+  }else{reset();$('mood').textContent='Face pawa jacche na'}
+  loop=setTimeout(detect,300);
+}
+
+/* admin */
+$('pw').onkeydown=e=>{if(e.key==='Enter')$('loginBtn').click()};
+$('loginBtn').onclick=()=>{
+  if($('pw').value==='admin123'){$('login').classList.add('hide');$('panel').classList.remove('hide');render()}
+  else $('err').textContent='Password vul. Abar try koro.';
+};
+$('clear').onclick=()=>{if(confirm('Sob record delete hobe. Nishchit?')){localStorage.removeItem(KEY);filter='';render()}};
+function del(i){const a=load();a.splice(i,1);localStorage.setItem(KEY,JSON.stringify(a));render()}
+function setF(m){filter=m;render()}
+function render(){
+  const all=load(),n=all.length,cnt={};
+  all.forEach(r=>cnt[r.mood]=(cnt[r.mood]||0)+1);
+  const topM=Object.entries(cnt).sort((a,b)=>b[1]-a[1])[0];
+  const avg=n?Math.round(all.reduce((s,r)=>s+(r.age||0),0)/n):0;
+  const m=all.filter(r=>r.gender==='male').length,f=all.filter(r=>r.gender==='female').length;
+  $('stats').innerHTML=[['Total photo',n],['Top mood',topM?topM[0]:'-'],['Average age',n?'~'+avg:'-'],['Male / Female',m+' / '+f]]
+    .map(([a,b])=>`<div class="stat"><small>${a}</small><b>${b}</b></div>`).join('');
+  $('dist').innerHTML=Object.entries(cnt).map(([k,v])=>`<div title="${k}: ${v}" style="width:${v/n*100}%;background:${COL[k]}"></div>`).join('');
+  $('chips').innerHTML=`<button class="chip ${filter?'':'on'}" onclick="setF('')">All (${n})</button>`+
+    Object.keys(cnt).map(k=>`<button class="chip ${filter===k?'on':''}" onclick="setF('${k}')"><i style="background:${COL[k]}"></i>${k} (${cnt[k]})</button>`).join('');
+  const list=all.map((r,i)=>({...r,i})).filter(r=>!filter||r.mood===filter);
+  $('grid').innerHTML=list.length?list.map(r=>`<div class="item"><img src="${r.img}" alt="">
+    <div class="b"><span class="badge" style="background:${COL[r.mood]}">${EMOJI[r.mood]||''} ${r.mood} ${r.conf}%</span>
+    <div class="meta">${r.age?'<b>'+r.gender+'</b>, ~'+r.age+' bochhor<br>':''}${r.time}</div>
+    <button class="del" onclick="del(${r.i})">Delete</button></div></div>`).join('')
+    :'<div class="empty">Ekhono kono record nai. Live analysis tab e giye camera on koro.</div>';
+}
+</script>
+</body>
+</html>
